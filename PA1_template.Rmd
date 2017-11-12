@@ -1,0 +1,208 @@
+---
+title: "Reproducible research assignment Document"
+author: "Mohamed Chenini"
+date: "November 9, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+## set the working directory
+```{r}
+setwd("~/DS/reproducible-research-Week2-Project")
+```
+## unzip the input data file
+
+```{r}
+if(!file.exists("activity.csv"))
+{
+    unzip("repdata%2Fdata%2Factivity.zip")
+}
+```
+### read the activity file into a data frame
+
+```{r}
+activityData <- read.csv(file = "activity.csv", header = TRUE)
+activityData$date <- as.Date(activityData$date, "%Y-%m-%d")
+```
+### get info on the activityData data frame
+
+```{r}
+str(activityData)
+```
+### Get a summary of the data
+
+```{r}
+summary(activityData)
+```
+
+
+### check the class of the date column and convert it to a Data class
+```{r}
+activityData$date <-  as.Date(activityData$date, format = "%Y-%m-%d")
+class(activityData$date)
+```
+  
+
+```{r}
+dailyStepSum <- tapply(activityData$steps, activityData$date, sum, na.rm = TRUE)
+```
+
+
+```{r}
+histData <- tapply(activityData$steps, activityData$date, sum, na.rm = TRUE)
+hist(histData, breaks = 19, col = "blue", xlab = "Total steps per day", ylab = "Number of days", main = "Frequency of Total number of steps per day")
+```
+
+### mean and median 
+
+```{r}
+meanDataByInterval <- mean(histData, na.rm = TRUE)
+medianDataByInterval <- median(histData, na.rm=TRUE)
+```
+
+
+```{r}
+fiveMinSteps <- aggregate(steps ~ interval, data = activityData, FUN =mean)
+head(fiveMinSteps)
+```
+
+
+### Average daily activity pattern  - time series plot 
+### 5-minute interval, on average across all the days in the dataset, that contains the maximum number of steps?
+
+```{r}
+stepsIntervalMean <- tapply(activityData$steps, as.factor(activityData$interval), mean, na.rm = TRUE)
+plot(levels(as.factor(activityData$interval)), stepsIntervalMean, type = "l", xlab = "Five Minute Interval",
+     ylab = "Number of Steps", main = "Mean Number of Steps based on 5 Minute Intervals", col = "red")
+```
+
+```{r}
+stepsIntervalMax <- which.max(stepsIntervalMean)
+intervalMax <- as.numeric(levels(as.factor(activityData$interval)))[stepsIntervalMax]
+intervalMax
+```
+### Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+
+```{r}
+stepsMax <- as.numeric(stepsIntervalMean[stepsIntervalMax])
+stepsMax
+```
+
+
+## Imputing missing values
+
+### Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with 𝙽𝙰s)
+
+```{r}
+nbrNAs <- nrow(activityData[!complete.cases(activityData), ])
+nbrNAs
+```
+
+### Clean the data
+```{r data cleaning, results = "hide"}
+cleanData <- na.omit(activityData)
+```
+
+ 
+```{r}
+library(dplyr)
+dataByDay <- group_by(cleanData, date)
+```
+
+### Get a summary of the data
+
+```{r}
+summary(dataByDay)
+```
+
+### Devise a strategy for filling in all of the missing values in the dataset. 
+```{r}
+library(dplyr)
+replaceWithMean <- function(num) replace(num, is.na(num), mean(num, na.rm = TRUE))
+dataComplete <- (activityData %>% group_by(interval) %>% mutate(steps = replaceWithMean(steps)))
+head(dataComplete)
+```
+### Verify no more NA in dataComplete
+```{r}
+sum(is.na(dataComplete))
+```
+
+### Create a new dataset that is equal to the original dataset but with the missing data filled in.
+
+```{r}
+cleanDataComplete <- tapply(dataComplete$steps, dataComplete$date, sum, na.rm = TRUE)
+hist(cleanDataComplete, breaks = 19, col = "green", xlab = "Total steps per day", ylab = "Number of days", main = "Frequency of Total number of complete steps per day")
+```
+### Calculate the mean and median total number of steps taken per day of the new complete clean data
+
+```{r}
+stepsCompleteMean <- mean(cleanDataComplete, na.rm = TRUE)
+stepsCompleteMean
+```
+```{r}
+stepsCompleteMedian <- median(cleanDataComplete, na.rm = TRUE)
+stepsCompleteMedian
+```
+
+### Do these values differ from the estimates from the first part of the assignment? 
+### Before cleaning
+```{r}
+meanDataByInterval
+medianDataByInterval
+```
+
+### After cleaning
+```{r}
+stepsCompleteMean
+stepsCompleteMedian
+```
+###  We see a slight difference in the mean and median before and adter the data cleaning
+
+
+## Are there differences in activity patterns between weekdays and weekends?
+
+### Create a new factor variable in the dataset with two levels – “weekday” and “weekend” indicating whether a given date is a weekday or weekend day.
+
+```{r}
+dataComplete$day <- ifelse(weekdays(dataComplete$date) %in% c("Saturday", "Sunday"), "weekend", "weekday")
+```
+
+### display 
+```{r}
+head(dataComplete)
+```
+###  Make a panel plot containing a time series plot (i.e. 𝚝𝚢𝚙𝚎 = "𝚕") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis).
+
+```{r}
+wday <- subset(dataComplete, day == "weekday")
+wday.steps <- aggregate(wday$steps, list(wday$interval), mean)
+wday.steps$day <- "Weekday"
+colnames(wday.steps) <- c("Interval", "Mean.Steps", "day")
+
+wend <- subset(dataComplete, day == "weekend")
+wend.steps <- aggregate(wend$steps, list(wend$interval), mean)
+wend.steps$day <- "Weekend"
+colnames(wend.steps) <- c("Interval", "Mean.Steps", "day")
+
+activity.data.weekday <- rbind(wday.steps, wend.steps)
+```
+### The two Time Series plots
+```{r}
+library(lattice)
+xyplot(Mean.Steps ~ Interval | day, activity.data.weekday, type = "l", layout = c(1,2), 
+       ylab = "Average Number of Steps", main = "Average Number of Steps in 5 minute intervals Wday vs Wend", col = "green")
+```
+
+
+
+
+
