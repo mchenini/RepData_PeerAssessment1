@@ -97,17 +97,11 @@ stepsMax <- as.numeric(stepsIntervalMean[stepsIntervalMax])
 stepsMax
 ```
 
-## Loading and preprocessing the data
-
-
-## What is mean total number of steps taken per day?
-
 
 ## What is the average daily activity pattern?
 
 
 ## Imputing missing values
-
 
 ### Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with 𝙽𝙰s)
 
@@ -211,5 +205,4 @@ xyplot(Mean.Steps ~ Interval | day, activity.data.weekday, type = "l", layout = 
        ylab = "Average Number of Steps", main = "Average Number of Steps in 5 minute intervals Wday vs Wend", col = "green")
 ```
 
-
-## Are there differences in activity patterns between weekdays and weekends?
+### There are some differences at the beginning of the graphs between weekdays and weekends.
